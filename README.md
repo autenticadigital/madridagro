@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Edu CRM Pro (ONLYOFFICE DocSpace Integration)
 
-## Getting Started
+## 🎯 Objetivo do Projeto
+Este projeto é a prova de conceito e fundação para o **Edu CRM Pro**. O objetivo principal é demonstrar a integração perfeita e segura do ecossistema **ONLYOFFICE DocSpace** dentro de um portal educacional moderno ("Vibe Coding").
+Ele implementa a capacidade de visualizar salas, editar documentos embutidos (Modo Editor) e criar novas redações através de chamadas de API seguras no backend.
 
-First, run the development server:
+## 🛠 Tech Stack
+- **Framework:** Next.js 15 (App Router)
+- **Estilização:** TailwindCSS v4 (Glassmorphism, Dark Mode, UI Premium)
+- **Integração Documental:** `@onlyoffice/docspace-react` SDK
+- **Linguagem:** JavaScript
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🚀 Setup e Instruções de Uso
+
+### 1. Requisitos Prévios
+Para que a integração funcione, você precisa configurar a segurança do seu DocSpace:
+- Acesse seu painel do ONLYOFFICE DocSpace.
+- Vá em **Ferramentas de desenvolvedor -> SDK de Incorporação**.
+- Adicione `http://localhost:3000` à lista de domínios permitidos para evitar bloqueios de CORS.
+
+### 2. Variáveis de Ambiente
+Crie ou edite o arquivo `.env.local` na raiz do projeto com as suas credenciais reais do DocSpace:
+```env
+NEXT_PUBLIC_DOCSPACE_URL=https://sua-url.onlyoffice.com
+DOCSPACE_API_TOKEN=seu_token_de_api_backend
+DOCSPACE_DEFAULT_ROOM_ID=id_da_sala_padrao
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Rodando o Projeto Localmente
+Instale as dependências e inicie o servidor:
+```bash
+npm install
+npm run dev
+```
+Acesse `http://localhost:3000` no seu navegador.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## 🌐 Deploy
+O projeto está otimizado para deploy *Zero Config* na **Vercel**.
+1. Suba o repositório para o GitHub.
+2. Importe na Vercel.
+3. Cadastre as variáveis de ambiente (`NEXT_PUBLIC_DOCSPACE_URL`, `DOCSPACE_API_TOKEN`, `DOCSPACE_DEFAULT_ROOM_ID`) nas configurações do projeto na Vercel.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📜 Histórico de Modificações (Changelog)
+- **v1.0.0 (18/08/2026):**
+  - Setup inicial com Next.js 15 e TailwindCSS v4.
+  - Interface Premium Glassmorphism com Dark Mode.
+  - Implementação do SDK `@onlyoffice/docspace-react`.
+  - Controle de estado dinâmico (Gerenciador vs. Editor focado).
+  - Rota de backend `/api/docspace/create` para criação automatizada de documentos via REST API simulada.
