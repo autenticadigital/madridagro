@@ -6,9 +6,10 @@ export async function POST(request) {
     const body = await request.json();
     const fileName = body.title || "Nova_Redacao.docx";
     
-    const baseUrl = process.env.NEXT_PUBLIC_DOCSPACE_URL;
+    // Se a Vercel não quiser salvar as variáveis, usamos os valores padrão (fallback) direto aqui!
+    const baseUrl = process.env.NEXT_PUBLIC_DOCSPACE_URL || "https://sergioaraujo.onlyoffice.com";
     const token = process.env.DOCSPACE_API_TOKEN;
-    const folderId = process.env.DOCSPACE_DEFAULT_ROOM_ID;
+    const folderId = process.env.DOCSPACE_DEFAULT_ROOM_ID || "@my";
 
     // Se as variáveis não foram configuradas (estamos testando o MVP)
     if (!token || token === 'fake_token_para_teste' || !folderId || folderId === 'fake_room_id') {
