@@ -1,6 +1,13 @@
 'use client';
 
-import { DocSpace } from "@onlyoffice/docspace-react";
+import dynamic from 'next/dynamic';
+
+// O pacote do ONLYOFFICE quebra no Next.js SSR porque tenta acessar 'document' no root do módulo.
+// Precisamos importar o componente DocSpace dinamicamente, ignorando o SSR.
+const DocSpace = dynamic(
+  () => import("@onlyoffice/docspace-react").then((mod) => mod.DocSpace),
+  { ssr: false }
+);
 
 export default function EditorDeRedacao({ fileId }) {
   const onAppReady = () => {
