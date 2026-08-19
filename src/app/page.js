@@ -1,7 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import EditorDeRedacao from "@/components/EditorDeRedacao";
+import dynamic from 'next/dynamic';
+
+// IMPORTANTE: Desativamos o SSR (Server-Side Rendering) para este componente.
+// Como o ONLYOFFICE usa a janela (window/document) do navegador, a Vercel quebrava ao tentar buildar no servidor Node.js
+const EditorDeRedacao = dynamic(() => import("@/components/EditorDeRedacao"), { 
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full min-h-[700px] rounded-xl overflow-hidden border border-gray-700/50 shadow-2xl flex items-center justify-center bg-gray-900/50 animate-pulse">
+      <p className="text-gray-400 font-medium">Carregando Editor de Redação...</p>
+    </div>
+  )
+});
 
 export default function Home() {
   const [activeDoc, setActiveDoc] = useState("2191725");
