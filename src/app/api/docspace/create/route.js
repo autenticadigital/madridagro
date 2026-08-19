@@ -41,12 +41,24 @@ export async function POST(request) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Erro ao conectar com ONLYOFFICE');
+      const errorText = await response.text();
+      let errorMsg = `ONLYOFFICE retornou status ${response.status}`;
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMsg = errorData.message || errorMsg;
+      } catch (e) {
+        errorMsg = `${errorMsg}. Resposta: ${errorText.substring(0, 50)}...`;
+      }
+      throw new Error(errorMsg);
     }
 
-    // O retorno padrão do ONLYOFFICE geralmente encapsula os dados dentro de "response"
-    const data = await response.json();
+    const responseText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch(e) {
+      throw new Error(`Falha ao ler resposta de sucesso do DocSpace. Resposta não é JSON: ${responseText.substring(0, 50)}...`);
+    }
     const newFileId = data.response?.id || data.id;
     
     return NextResponse.json({ 
