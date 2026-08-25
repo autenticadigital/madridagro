@@ -1,6 +1,6 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { Home, ClipboardList, Package, Users, Receipt, LogOut, Download, Settings } from 'lucide-react';
-import { useEffect, useState } from 'react';
+
 import { Logo } from './ui/Logo';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { supabase } from '../lib/supabase';
