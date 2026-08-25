@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom';
-import { Home, ClipboardList, Package, Users, Receipt, LogOut, Download, Cloud, CloudOff, Settings } from 'lucide-react';
+import { Home, ClipboardList, Package, Users, Receipt, LogOut, Download, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Logo } from './ui/Logo';
 import { usePWAInstall } from '../hooks/usePWAInstall';
@@ -7,18 +7,6 @@ import { supabase } from '../lib/supabase';
 
 export function Layout() {
   const { isInstallable, promptInstall } = usePWAInstall();
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -59,11 +47,6 @@ export function Layout() {
           ))}
         </nav>
         <div className="flex flex-col gap-2 px-2 mt-auto">
-          {/* Sync Status Indicator */}
-          <div className={`flex flex-col items-center justify-center p-3 mb-2 rounded-xl border border-palette-4/30 ${!isOnline ? 'text-red-500 bg-red-50' : 'text-palette-1 bg-palette-5/10'}`} title={!isOnline ? 'Offline' : 'Online'}>
-            {!isOnline ? <CloudOff size={24} /> : <Cloud size={24} />}
-          </div>
-
           {isInstallable && (
             <button 
               onClick={promptInstall}
@@ -92,7 +75,7 @@ export function Layout() {
             to={item.to}
             className={({ isActive }) =>
               `flex flex-col items-center justify-center w-full h-full transition-all duration-300 ${
-                isActive ? 'text-palette-1 scale-110 drop-shadow-sm' : 'text-palette-3 hover:text-palette-2'
+                isActive ? 'text-palette-1 scale-110 drop-shadow-sm' : 'text-text-light hover:text-palette-1'
               }`
             }
           >
@@ -100,13 +83,6 @@ export function Layout() {
             <span className="text-[10px] mt-1 font-semibold">{item.label}</span>
           </NavLink>
         ))}
-        {/* Sync Status Mobile */}
-        <div 
-          className={`flex flex-col items-center justify-center w-full h-full transition-all duration-300 ${!isOnline ? 'text-red-500' : 'text-palette-1'}`}
-        >
-          {!isOnline ? <CloudOff size={24} /> : <Cloud size={24} />}
-          <span className="text-[10px] mt-1 font-bold">{!isOnline ? 'Offline' : 'Online'}</span>
-        </div>
         {isInstallable && (
           <button 
             onClick={promptInstall}
