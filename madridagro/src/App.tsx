@@ -9,8 +9,9 @@ import { Vendas } from './pages/Vendas';
 import { Estoque } from './pages/Estoque';
 import { Clientes } from './pages/Clientes';
 import { Fiados } from './pages/Fiados';
+import { CentralLogistica } from './pages/CentralLogistica';
+import { ContasPagar } from './pages/ContasPagar';
 import { Configuracoes } from './pages/Configuracoes';
-
 function App() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -48,6 +49,8 @@ function App() {
           <Route path="estoque" element={<Estoque />} />
           <Route path="clientes" element={<Clientes />} />
           <Route path="fiados" element={<Fiados />} />
+          <Route path="contas-pagar" element={<ContasPagar />} />
+          <Route path="logistica" element={<CentralLogistica />} />
           <Route path="configuracoes" element={<Configuracoes />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

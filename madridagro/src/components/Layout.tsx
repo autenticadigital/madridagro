@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom';
-import { Home, ClipboardList, Package, Users, Receipt, LogOut, Download, Settings } from 'lucide-react';
+import { Home, ClipboardList, Package, Users, Receipt, LogOut, Download, Settings, Truck, ArrowDownRight } from 'lucide-react';
 
 import { Logo } from './ui/Logo';
 import { usePWAInstall } from '../hooks/usePWAInstall';
@@ -14,11 +14,12 @@ export function Layout() {
 
   const navItems = [
     { to: '/', icon: <Home size={24} />, label: 'Início' },
+    { to: '/logistica', icon: <Truck size={24} />, label: 'Logística' },
     { to: '/vendas', icon: <ClipboardList size={24} />, label: 'Vendas' },
     { to: '/estoque', icon: <Package size={24} />, label: 'Estoque' },
     { to: '/clientes', icon: <Users size={24} />, label: 'Clientes' },
-    { to: '/fiados', icon: <Receipt size={24} />, label: 'Fiados' },
-    { to: '/configuracoes', icon: <Settings size={24} />, label: 'Ajustes' },
+    { to: '/fiados', icon: <Receipt size={24} />, label: 'A Receber' },
+    { to: '/contas-pagar', icon: <ArrowDownRight size={24} />, label: 'A Pagar' },
   ];
 
   return (

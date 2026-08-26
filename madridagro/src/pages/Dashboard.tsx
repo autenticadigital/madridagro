@@ -1,7 +1,7 @@
 import { useLiveSupabase } from '../hooks/useLiveSupabase';
 import { supabase } from '../lib/supabase';
 import type { Sale, AccountReceivable, Product, Client } from '../lib/types';
-import { TrendingUp, Users, Package, AlertCircle, LogOut } from 'lucide-react';
+import { TrendingUp, Users, Package, AlertCircle, LogOut, Settings } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
 
 export function Dashboard() {
@@ -35,12 +35,20 @@ export function Dashboard() {
           <p className="text-palette-2 text-sm">Resumo da operação de hoje.</p>
         </div>
         
-        <button 
-          onClick={async () => await supabase.auth.signOut()}
-          className="md:hidden flex items-center gap-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:text-red-700 font-bold py-2 px-4 rounded-xl transition-all shadow-sm"
-        >
-          <LogOut size={16} /> Sair
-        </button>
+        <div className="md:hidden flex items-center gap-2">
+          <button 
+            onClick={() => window.location.href = '/configuracoes'}
+            className="flex items-center gap-2 bg-white text-palette-2 border border-palette-4 hover:bg-palette-5/50 font-bold py-2 px-3 rounded-xl transition-all shadow-sm"
+          >
+            <Settings size={16} /> Ajustes
+          </button>
+          <button 
+            onClick={async () => await supabase.auth.signOut()}
+            className="flex items-center gap-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:text-red-700 font-bold py-2 px-3 rounded-xl transition-all shadow-sm"
+          >
+            <LogOut size={16} /> Sair
+          </button>
+        </div>
       </header>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
