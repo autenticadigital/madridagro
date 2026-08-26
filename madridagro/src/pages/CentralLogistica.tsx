@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import { Truck, History, PhoneCall, Plus, Fuel, DollarSign, MapPin, Wrench, Search, FileText, MessageSquare, MessageCircle, X, AlertTriangle, Navigation } from 'lucide-react';
 
 export function CentralLogistica() {
@@ -8,26 +9,94 @@ export function CentralLogistica() {
   const [isSOSMode, setIsSOSMode] = useState(false);
   const [selectedSOSContacts, setSelectedSOSContacts] = useState<number[]>([]);
 
-  const mockTrips = [
-    {
-      id: 'VG-1042',
-      date: '25/08/2026',
-      truck: 'Scania R440 (ABC-1234)',
-      driver: 'Carlos Silva',
-      supplier: 'Fazenda Boa Vista',
-      volumeTon: 14.5,
-      costMercadoria: 25000,
-      costLogistico: 1700, // Diesel/Pedágio
-      costAlimentacao: 350,
-      costManutencao: 500,
-      costOutros: 100,
-      revenue: 32000,
-      occurrences: [
-        { time: '25/08 - 02:00', text: 'Pneu furado em Linhares. Atraso de 3 horas.' },
-        { time: '25/08 - 09:30', text: 'Carga liberada na fazenda. Saindo para rota.' }
-      ]
+  
+  const [trips, setTrips] = useState<any[]>([]);
+  const [, setLoading] = useState(true);
+  const [newNoteText, setNewNoteText] = useState('');
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchTrips();
+    
+    const channel = supabase.channel('custom-all-channel-logistics')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'logistics_trips' }, () => {
+        fetchTrips();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'logistics_notes' }, () => {
+        fetchTrips();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchTrips = async () => {
+    try {
+      const { data: tripsData, error: tripsError } = await supabase
+        .from('logistics_trips')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (tripsError) throw tripsError;
+
+      const { data: notesData, error: notesError } = await supabase
+        .from('logistics_notes')
+        .select('*')
+        .order('created_at', { ascending: true });
+        
+      if (notesError) throw notesError;
+
+      const formattedTrips = (tripsData || []).map((trip: any) => ({
+        id: trip.id.substring(0, 8).toUpperCase(),
+        originalId: trip.id,
+        date: trip.date,
+        truck: trip.truck,
+        driver: trip.driver,
+        supplier: trip.supplier,
+        volumeTon: Number(trip.volume_ton),
+        costMercadoria: Number(trip.cost_mercadoria),
+        costLogistico: Number(trip.cost_logistico),
+        costAlimentacao: Number(trip.cost_alimentacao),
+        costManutencao: Number(trip.cost_manutencao),
+        costOutros: Number(trip.cost_outros),
+        revenue: Number(trip.revenue),
+        occurrences: (notesData || [])
+          .filter((note: any) => note.trip_id === trip.id)
+          .map((note: any) => ({
+            time: note.time,
+            text: note.text
+          }))
+      }));
+      
+      setTrips(formattedTrips);
+    } catch (error) {
+      console.error('Error fetching logistics:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const handleAddNote = async () => {
+    if (!newNoteText.trim() || !selectedTripId) return;
+    
+    const now = new Date();
+    const timeString = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth()+1).toString().padStart(2, '0')} - ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    
+    try {
+      await supabase.from('logistics_notes').insert([{
+        trip_id: selectedTripId,
+        time: timeString,
+        text: newNoteText
+      }]);
+      setNewNoteText('');
+      setIsNoteModalOpen(false);
+    } catch (error) {
+      console.error('Error adding note:', error);
+    }
+  };
+
 
   const mockHistory = [
     { id: 'VG-1041', date: '20/08/2026', truck: 'Volvo FH540', status: 'Concluída', profit: 3400 },
@@ -86,7 +155,7 @@ export function CentralLogistica() {
             </button>
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            {mockTrips.map((trip) => {
+            {trips.map((trip) => {
               const totalCost = trip.costMercadoria + trip.costLogistico + trip.costAlimentacao + trip.costManutencao + trip.costOutros;
               const netProfit = trip.revenue - totalCost;
               return (
@@ -154,14 +223,14 @@ export function CentralLogistica() {
                           Diário de Bordo
                         </h4>
                         <button 
-                          onClick={() => setIsNoteModalOpen(true)}
+                          onClick={() => { setSelectedTripId(trip.originalId); setIsNoteModalOpen(true); }}
                           className="text-[10px] uppercase font-bold text-palette-1 hover:text-palette-2 transition-colors"
                         >
                           + Add Nota
                         </button>
                       </div>
                       <div className="space-y-3">
-                        {trip.occurrences?.map((occ, idx) => (
+                        {trip.occurrences?.map((occ: any, idx: number) => (
                           <div key={idx} className="flex gap-3 text-sm">
                             <div className="w-1.5 h-1.5 rounded-full bg-palette-3 mt-1.5 shrink-0" />
                             <div>
@@ -342,6 +411,8 @@ export function CentralLogistica() {
               <div>
                 <label className="block text-sm font-bold text-palette-2 mb-2">Relato / Ocorrência</label>
                 <textarea 
+                  value={newNoteText}
+                  onChange={(e) => setNewNoteText(e.target.value)}
                   rows={3} 
                   className="w-full border border-palette-4 rounded-xl px-4 py-3 focus:outline-none focus:border-palette-1 resize-none" 
                   placeholder="Descreva o que aconteceu com a carga..." 
@@ -406,7 +477,40 @@ export function CentralLogistica() {
                 Cancelar
               </button>
               <button 
-                onClick={() => { setIsNoteModalOpen(false); setIsSOSMode(false); setSelectedSOSContacts([]); }} 
+                onClick={() => { 
+                  if (isSOSMode && selectedSOSContacts.length > 0) {
+                    const selectedPhones = mockContacts
+                      .filter(c => selectedSOSContacts.includes(c.id))
+                      .map(c => c.phone.replace(/\D/g, ''));
+                      
+                    const sendSMS = (text: string) => {
+                      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                      const separator = isIOS ? ',' : ';';
+                      const phoneString = selectedPhones.join(separator);
+                      window.location.href = `sms:${phoneString}${isIOS ? '&' : '?'}body=${encodeURIComponent(text)}`;
+                      
+                      setIsNoteModalOpen(false); 
+                      setIsSOSMode(false); 
+                      setSelectedSOSContacts([]);
+                    };
+
+                    if (navigator.geolocation) {
+                      navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                          const text = `🚨 ALERTA SOS - MADRID AGRO 🚨\nEmergência na carga!\nLocalização: https://maps.google.com/?q=${position.coords.latitude},${position.coords.longitude}`;
+                          sendSMS(text);
+                        },
+                        () => {
+                          sendSMS(`🚨 ALERTA SOS - MADRID AGRO 🚨\nEmergência na carga! Não foi possível obter a localização.`);
+                        }
+                      );
+                    } else {
+                      sendSMS(`🚨 ALERTA SOS - MADRID AGRO 🚨\nEmergência na carga!`);
+                    }
+                  } else {
+                    handleAddNote();
+                  }
+                }} 
                 disabled={isSOSMode && selectedSOSContacts.length === 0}
                 className={`px-6 py-2 text-white font-bold rounded-xl transition-colors shadow-sm ${
                   isSOSMode 

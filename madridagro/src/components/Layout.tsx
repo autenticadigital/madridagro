@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom';
-import { Home, ClipboardList, Package, Users, Receipt, LogOut, Download, Settings, Truck, ArrowDownRight } from 'lucide-react';
+import { Home, ClipboardList, Package, Users, Receipt, LogOut, Download, Truck, ArrowDownRight } from 'lucide-react';
 
 import { Logo } from './ui/Logo';
 import { usePWAInstall } from '../hooks/usePWAInstall';
