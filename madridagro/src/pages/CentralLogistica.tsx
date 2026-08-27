@@ -54,6 +54,16 @@ export function CentralLogistica() {
     revenue: ''
   });
 
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
+  const [newContact, setNewContact] = useState({
+    name: '',
+    phone: '',
+    type: 'Manutenção',
+    location: ''
+  });
+
+
   const [editingTripId, setEditingTripId] = useState<string | null>(null);
 
   const openNewTripModal = () => {
@@ -113,6 +123,57 @@ export function CentralLogistica() {
   };
 
 
+
+  const handleAddContact = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingContactId) {
+        await supabase.from('logistics_contacts').update({
+          name: newContact.name,
+          phone: newContact.phone,
+          type: newContact.type,
+          location: newContact.location
+        }).eq('id', editingContactId);
+        toast.success("Contato atualizado!");
+      } else {
+        await supabase.from('logistics_contacts').insert([{
+          name: newContact.name,
+          phone: newContact.phone,
+          type: newContact.type,
+          location: newContact.location
+        }]);
+        toast.success("Contato adicionado!");
+      }
+      setIsContactModalOpen(false);
+      setNewContact({ name: '', phone: '', type: 'Manutenção', location: '' });
+      setEditingContactId(null);
+    } catch (err) {
+      toast.error('Erro ao salvar contato');
+    }
+  };
+
+  const handleEditContact = (contact: any) => {
+    setEditingContactId(contact.id);
+    setNewContact({
+      name: contact.name,
+      phone: contact.phone,
+      type: contact.type,
+      location: contact.location || ''
+    });
+    setIsContactModalOpen(true);
+  };
+
+  const handleDeleteContact = async (id: string) => {
+    if (window.confirm("Tem certeza que deseja excluir este contato?")) {
+      try {
+        await supabase.from('logistics_contacts').delete().eq('id', id);
+        toast.success("Contato excluído!");
+      } catch (err) {
+        toast.error("Erro ao excluir");
+      }
+    }
+  };
+
   const handleAddTrip = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -153,6 +214,7 @@ export function CentralLogistica() {
 
   useEffect(() => {
     fetchTrips();
+    fetchContacts();
     
     const channel = supabase.channel('custom-all-channel-logistics')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'logistics_trips' }, () => {
@@ -161,12 +223,17 @@ export function CentralLogistica() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'logistics_notes' }, () => {
         fetchTrips();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'logistics_contacts' }, () => {
+        fetchContacts();
+      })
       .subscribe();
       
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  
 
   const fetchTrips = async () => {
     try {
@@ -240,11 +307,28 @@ export function CentralLogistica() {
     { id: 'VG-1040', date: '15/08/2026', truck: 'Scania R440', status: 'Concluída', profit: 2850 },
   ];
 
-  const mockContacts = [
-    { id: 1, name: 'Borracharia do Zé', type: 'Manutenção', phone: '(11) 99999-1111', location: 'Rod. Fernão Dias, km 45', icon: Wrench },
-    { id: 2, name: 'Fazenda Boa Vista', type: 'Fornecedor', phone: '(31) 98888-2222', location: 'Linhares - ES', icon: MapPin },
-    { id: 3, name: 'Guincho 24h', type: 'Emergência', phone: '0800-123-456', location: 'Nacional', icon: PhoneCall },
-  ];
+
+
+
+
+  async function fetchContacts() {
+    try {
+      const { data, error } = await supabase.from('logistics_contacts').select('*').order('name');
+      if (error) throw error;
+      setContacts(data || []);
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+    }
+  };
+
+  const getContactIcon = (type: string) => {
+    switch (type) {
+      case 'Manutenção': return <Wrench size={24} />;
+      case 'Fornecedor': return <MapPin size={24} />;
+      case 'Emergência': return <PhoneCall size={24} />;
+      default: return <PhoneCall size={24} />;
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -295,7 +379,9 @@ export function CentralLogistica() {
             {trips.map((trip) => {
               const totalCost = trip.costMercadoria + trip.costLogistico + trip.costAlimentacao + trip.costManutencao + trip.costOutros;
               const netProfit = trip.revenue - totalCost;
-              return (
+            
+
+  return (
                 <div key={trip.id} className="bg-white border border-palette-4 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col">
                                     <div className="p-4 border-b border-palette-4 flex justify-between items-center bg-palette-5/10">
                     <div className="flex items-center gap-2 text-palette-1">
@@ -458,7 +544,7 @@ export function CentralLogistica() {
               <input type="text" placeholder="Buscar contato..." className="bg-transparent border-none outline-none text-sm w-full font-medium" />
             </div>
             <button 
-              onClick={() => setIsContactModalOpen(true)}
+              onClick={() => { setEditingContactId(null); setNewContact({name: '', phone: '', type: 'Manutenção', location: ''}); setIsContactModalOpen(true); }}
               className="flex items-center gap-2 bg-palette-1 text-white px-4 py-2 rounded-xl font-bold hover:bg-palette-2 transition-colors shadow-sm"
             >
               <Plus size={20} /> Novo Contato
@@ -466,19 +552,28 @@ export function CentralLogistica() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockContacts.map(contact => (
-              <div key={contact.id} className="bg-white border border-palette-4 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
-                <div className="flex justify-between items-start">
+            {contacts.map(contact => (
+              <div key={contact.id} className="bg-white border border-palette-4 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col gap-4 relative group">
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                  <button onClick={() => handleEditContact(contact)} className="p-1.5 bg-white border border-palette-4 rounded-lg text-palette-3 hover:text-palette-1 shadow-sm">
+                    <Pencil size={16} />
+                  </button>
+                  <button onClick={() => handleDeleteContact(contact.id)} className="p-1.5 bg-white border border-palette-4 rounded-lg text-palette-3 hover:text-red-500 shadow-sm">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+                
+                <div className="flex justify-between items-start mt-2">
                   <div className="p-3 bg-palette-5/30 rounded-xl text-palette-1">
-                    <contact.icon size={24} />
+                    {getContactIcon(contact.type)}
                   </div>
                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 bg-palette-5/50 rounded-md text-palette-3">
                     {contact.type}
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-text-main">{contact.name}</h3>
-                  <p className="text-palette-2 text-sm font-medium">{contact.location}</p>
+                  <h3 className="font-bold text-lg text-text-main pr-16">{contact.name}</h3>
+                  <p className="text-palette-2 text-sm font-medium">{contact.location || '-'}</p>
                 </div>
                 <div className="pt-4 border-t border-palette-4 flex justify-between items-center mt-auto">
                   <span className="font-bold text-text-main">{contact.phone}</span>
@@ -493,6 +588,11 @@ export function CentralLogistica() {
                 </div>
               </div>
             ))}
+            {contacts.length === 0 && (
+              <div className="col-span-full p-8 text-center text-palette-2 border-2 border-dashed border-palette-4 rounded-2xl">
+                Nenhum contato cadastrado.
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -502,43 +602,45 @@ export function CentralLogistica() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-4 border-b border-palette-4">
-              <h3 className="font-bold text-lg text-text-main">Novo Contato de Apoio</h3>
+              <h3 className="font-bold text-lg text-text-main">{editingContactId ? 'Editar Contato' : 'Novo Contato de Apoio'}</h3>
               <button onClick={() => setIsContactModalOpen(false)} className="text-palette-2 hover:text-red-500 transition-colors">
                 <X size={24} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-palette-2 mb-1">Nome / Empresa</label>
-                <input type="text" className="w-full border border-palette-4 rounded-xl px-4 py-2 focus:outline-none focus:border-palette-1" placeholder="Ex: Borracharia 24h" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleAddContact}>
+              <div className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-palette-2 mb-1">Telefone (WhatsApp)</label>
-                  <input type="text" className="w-full border border-palette-4 rounded-xl px-4 py-2 focus:outline-none focus:border-palette-1" placeholder="(00) 00000-0000" />
+                  <label className="block text-sm font-bold text-palette-2 mb-1">Nome / Empresa</label>
+                  <input required type="text" className="w-full border border-palette-4 rounded-xl px-4 py-2 focus:outline-none focus:border-palette-1" placeholder="Ex: Borracharia 24h" value={newContact.name} onChange={e => setNewContact({...newContact, name: e.target.value})} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-palette-2 mb-1">Telefone (WhatsApp)</label>
+                    <input required type="text" className="w-full border border-palette-4 rounded-xl px-4 py-2 focus:outline-none focus:border-palette-1" placeholder="(00) 00000-0000" value={newContact.phone} onChange={e => setNewContact({...newContact, phone: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-palette-2 mb-1">Tipo</label>
+                    <select className="w-full border border-palette-4 rounded-xl px-4 py-2 focus:outline-none focus:border-palette-1 bg-white" value={newContact.type} onChange={e => setNewContact({...newContact, type: e.target.value})}>
+                      <option value="Manutenção">Manutenção</option>
+                      <option value="Fornecedor">Fornecedor</option>
+                      <option value="Emergência">Emergência</option>
+                    </select>
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-palette-2 mb-1">Tipo</label>
-                  <select className="w-full border border-palette-4 rounded-xl px-4 py-2 focus:outline-none focus:border-palette-1 bg-white">
-                    <option>Manutenção</option>
-                    <option>Fornecedor</option>
-                    <option>Emergência</option>
-                  </select>
+                  <label className="block text-sm font-bold text-palette-2 mb-1">Localização (Opcional)</label>
+                  <input type="text" className="w-full border border-palette-4 rounded-xl px-4 py-2 focus:outline-none focus:border-palette-1" placeholder="Ex: BR-101, km 20" value={newContact.location} onChange={e => setNewContact({...newContact, location: e.target.value})} />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-bold text-palette-2 mb-1">Localização (Opcional)</label>
-                <input type="text" className="w-full border border-palette-4 rounded-xl px-4 py-2 focus:outline-none focus:border-palette-1" placeholder="Ex: BR-101, km 20" />
+              <div className="p-4 border-t border-palette-4 bg-palette-5/10 flex justify-end gap-3">
+                <button type="button" onClick={() => setIsContactModalOpen(false)} className="px-4 py-2 font-bold text-palette-2 hover:text-text-main transition-colors">
+                  Cancelar
+                </button>
+                <button type="submit" className="px-4 py-2 bg-palette-1 text-white font-bold rounded-xl hover:bg-palette-2 transition-colors shadow-sm">
+                  {editingContactId ? 'Salvar Edição' : 'Salvar Contato'}
+                </button>
               </div>
-            </div>
-            <div className="p-4 border-t border-palette-4 bg-palette-5/10 flex justify-end gap-3">
-              <button onClick={() => setIsContactModalOpen(false)} className="px-4 py-2 font-bold text-palette-2 hover:text-text-main transition-colors">
-                Cancelar
-              </button>
-              <button onClick={() => setIsContactModalOpen(false)} className="px-4 py-2 bg-palette-1 text-white font-bold rounded-xl hover:bg-palette-2 transition-colors shadow-sm">
-                Salvar Contato
-              </button>
-            </div>
+            </form>
           </div>
         </div>
       )}
@@ -605,7 +707,7 @@ export function CentralLogistica() {
                     <div className="bg-white rounded-lg p-3 border border-red-100 shadow-sm">
                       <p className="text-xs font-bold text-red-800 mb-2">Selecione para quem enviar o alerta:</p>
                       <div className="space-y-2 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
-                        {mockContacts.map(contact => (
+                        {contacts.map(contact => (
                           <label key={contact.id} className="flex items-center gap-3 p-2 hover:bg-red-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
                             <input 
                               type="checkbox" 
@@ -639,7 +741,7 @@ export function CentralLogistica() {
               <button 
                 onClick={() => { 
                   if (isSOSMode && selectedSOSContacts.length > 0) {
-                    const selectedPhones = mockContacts
+                    const selectedPhones = contacts
                       .filter(c => selectedSOSContacts.includes(c.id))
                       .map(c => c.phone.replace(/\D/g, ''));
                       
