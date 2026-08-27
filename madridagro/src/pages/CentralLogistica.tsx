@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
 import { Truck, History, PhoneCall, Plus, Fuel, DollarSign, MapPin, Wrench, Search, FileText, MessageSquare, MessageCircle, X, AlertTriangle, Navigation, Pencil, Trash2 } from 'lucide-react';
 
 export function CentralLogistica() {
@@ -8,6 +9,32 @@ export function CentralLogistica() {
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [isSOSMode, setIsSOSMode] = useState(false);
   const [selectedSOSContacts, setSelectedSOSContacts] = useState<number[]>([]);
+
+  const [gpsLocation, setGpsLocation] = useState<GeolocationCoordinates | null>(null);
+  const [isCapturingGps, setIsCapturingGps] = useState(false);
+
+  const handleCaptureGps = () => {
+    setIsCapturingGps(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setGpsLocation(position.coords);
+          setIsCapturingGps(false);
+          toast.success("Localização capturada com sucesso!");
+        },
+        (error) => {
+          console.error("GPS Error", error);
+          toast.error("Não foi possível capturar a localização.");
+          setIsCapturingGps(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      toast.error("Geolocalização não suportada no seu navegador.");
+      setIsCapturingGps(false);
+    }
+  };
+
 
   
   const [trips, setTrips] = useState<any[]>([]);
@@ -562,8 +589,18 @@ export function CentralLogistica() {
                 {/* Opções SOS Expandidas */}
                 {isSOSMode && (
                   <div className="mt-4 pt-4 border-t border-red-200 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <button className="w-full flex items-center justify-center gap-2 bg-white border border-red-200 text-red-600 font-bold py-2 rounded-lg text-sm hover:bg-red-50 transition-colors">
-                      <Navigation size={16} /> Capturar Minha Localização GPS
+                    <button 
+                      type="button"
+                      onClick={handleCaptureGps}
+                      disabled={isCapturingGps}
+                      className={`w-full flex items-center justify-center gap-2 border font-bold py-2 rounded-lg text-sm transition-colors ${
+                        gpsLocation 
+                          ? 'bg-green-50 border-green-200 text-green-700' 
+                          : 'bg-white border-red-200 text-red-600 hover:bg-red-50'
+                      }`}
+                    >
+                      <Navigation size={16} className={isCapturingGps ? 'animate-pulse' : ''} /> 
+                      {isCapturingGps ? 'Buscando satélites...' : gpsLocation ? 'Localização GPS Capturada!' : 'Capturar Minha Localização GPS'}
                     </button>
                     <div className="bg-white rounded-lg p-3 border border-red-100 shadow-sm">
                       <p className="text-xs font-bold text-red-800 mb-2">Selecione para quem enviar o alerta:</p>
@@ -596,7 +633,7 @@ export function CentralLogistica() {
             </div>
 
             <div className="p-4 border-t border-palette-4 bg-palette-5/10 flex justify-end gap-3">
-              <button onClick={() => { setIsNoteModalOpen(false); setIsSOSMode(false); setSelectedSOSContacts([]); }} className="px-4 py-2 font-bold text-palette-2 hover:text-text-main transition-colors">
+              <button onClick={() => { setIsNoteModalOpen(false); setIsSOSMode(false); setSelectedSOSContacts([]); setGpsLocation(null); setIsCapturingGps(false); }} className="px-4 py-2 font-bold text-palette-2 hover:text-text-main transition-colors">
                 Cancelar
               </button>
               <button 
@@ -617,19 +654,10 @@ export function CentralLogistica() {
                       setSelectedSOSContacts([]);
                     };
 
-                    if (navigator.geolocation) {
-                      navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                          const text = `🚨 ALERTA SOS - MADRID AGRO 🚨\nEmergência na carga!\nLocalização: https://maps.google.com/?q=${position.coords.latitude},${position.coords.longitude}`;
-                          sendSMS(text);
-                        },
-                        () => {
-                          sendSMS(`🚨 ALERTA SOS - MADRID AGRO 🚨\nEmergência na carga! Não foi possível obter a localização.`);
-                        }
-                      );
-                    } else {
-                      sendSMS(`🚨 ALERTA SOS - MADRID AGRO 🚨\nEmergência na carga!`);
-                    }
+                    const text = gpsLocation
+                      ? `🚨 ALERTA SOS - MADRID AGRO 🚨\nEmergência na carga!\nLocalização: https://maps.google.com/?q=${gpsLocation.latitude},${gpsLocation.longitude}`
+                      : `🚨 ALERTA SOS - MADRID AGRO 🚨\nEmergência na carga!`;
+                    sendSMS(text);
                   } else {
                     handleAddNote();
                   }
