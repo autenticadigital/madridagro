@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Logo } from '../components/ui/Logo';
 import toast from 'react-hot-toast';
 
-type AuthMode = 'login' | 'register' | 'reset';
+type AuthMode = 'login' | 'reset';
 
 export function Login() {
   const [mode, setMode] = useState<AuthMode>('login');
@@ -19,11 +19,7 @@ export function Login() {
       if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-      } else if (mode === 'register') {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        toast.success('Conta criada! Faça login para continuar.');
-        setMode('login');
+
       } else if (mode === 'reset') {
         const { error } = await supabase.auth.resetPasswordForEmail(email);
         if (error) throw error;
@@ -61,14 +57,13 @@ export function Login() {
           )}
           <button disabled={loading} type="submit"
             className="w-full bg-palette-1 hover:brightness-110 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:shadow-none disabled:transform-none mt-2">
-            {loading ? 'Aguarde...' : mode === 'login' ? 'Acessar Sistema' : mode === 'register' ? 'Criar Conta' : 'Recuperar Senha'}
+            {loading ? 'Aguarde...' : mode === 'login' ? 'Acessar Sistema' : 'Recuperar Senha'}
           </button>
 
           <div className="flex flex-col items-center space-y-3 mt-6 text-sm font-bold text-palette-1">
             {mode === 'login' ? (
               <>
-                <button type="button" onClick={() => setMode('register')} className="hover:underline text-palette-2">Criar uma nova conta</button>
-                <button type="button" onClick={() => setMode('reset')} className="hover:underline text-text-light text-xs">Esqueci minha senha</button>
+                <button type="button" onClick={() => setMode('reset')} className="hover:underline text-palette-2 mt-2">Esqueci minha senha</button>
               </>
             ) : (
               <button type="button" onClick={() => setMode('login')} className="hover:underline">Voltar para o Login</button>
