@@ -302,10 +302,6 @@ export function CentralLogistica() {
   };
 
 
-  const mockHistory = [
-    { id: 'VG-1041', date: '20/08/2026', truck: 'Volvo FH540', status: 'Concluída', profit: 3400 },
-    { id: 'VG-1040', date: '15/08/2026', truck: 'Scania R440', status: 'Concluída', profit: 2850 },
-  ];
 
 
 
@@ -516,19 +512,28 @@ export function CentralLogistica() {
                 </tr>
               </thead>
               <tbody>
-                {mockHistory.map((trip) => (
+                {trips.filter(t => t.status === 'Concluída').map((trip) => (
                   <tr key={trip.id} className="border-b border-palette-5 hover:bg-palette-5/20 transition-colors">
-                    <td className="p-4 font-bold text-text-main flex items-center gap-2"><History size={16} className="text-palette-1"/>{trip.id}</td>
-                    <td className="p-4 text-sm font-medium text-palette-3">{trip.date}</td>
-                    <td className="p-4 text-sm font-bold text-text-main">{trip.truck}</td>
-                    <td className="p-4 font-black text-green-600">R$ {trip.profit.toLocaleString('pt-BR')}</td>
+                    <td className="p-4 font-bold text-text-main flex items-center gap-2"><History size={16} className="text-palette-1"/>{trip.title}</td>
+                    <td className="p-4 text-sm font-medium text-palette-3">{new Date(trip.date).toLocaleDateString('pt-BR')}</td>
+                    <td className="p-4 text-sm font-bold text-text-main">{trip.plate}</td>
+                    <td className="p-4 font-black text-green-600">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(trip.revenue || 0) - Number(trip.costs || 0))}
+                    </td>
                     <td className="p-4">
                       <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-green-100 text-green-700">
-                        {trip.status}
+                        Concluída
                       </span>
                     </td>
                   </tr>
                 ))}
+                {trips.filter(t => t.status === 'Concluída').length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-palette-2 font-medium">
+                      Nenhuma carga concluída no histórico.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
