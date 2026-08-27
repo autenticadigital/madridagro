@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Truck, History, PhoneCall, Plus, Fuel, DollarSign, MapPin, Wrench, Search, FileText, MessageSquare, MessageCircle, X, AlertTriangle, Navigation } from 'lucide-react';
+import { Truck, History, PhoneCall, Plus, Fuel, DollarSign, MapPin, Wrench, Search, FileText, MessageSquare, MessageCircle, X, AlertTriangle, Navigation, Pencil, Trash2 } from 'lucide-react';
 
 export function CentralLogistica() {
   const [activeTab, setActiveTab] = useState<'ativas' | 'historico' | 'contatos'>('ativas');
@@ -27,10 +27,69 @@ export function CentralLogistica() {
     revenue: ''
   });
 
+  const [editingTripId, setEditingTripId] = useState<string | null>(null);
+
+  const openNewTripModal = () => {
+    setEditingTripId(null);
+    setNewTrip({
+      date: '', truck: '', driver: '', supplier: '', volume_ton: '', 
+      cost_mercadoria: '', cost_logistico: '', cost_alimentacao: '', 
+      cost_manutencao: '', cost_outros: '', revenue: ''
+    });
+    setIsNewTripModalOpen(true);
+  };
+
+  const openEditTripModal = (trip: any) => {
+    setEditingTripId(trip.originalId);
+    
+    // Format date from dd/mm/yyyy to yyyy-mm-dd
+    let formattedDate = trip.date;
+    if (trip.date && trip.date.includes('/')) {
+      formattedDate = trip.date.split('/').reverse().join('-');
+    }
+
+    setNewTrip({
+      date: formattedDate,
+      truck: trip.truck,
+      driver: trip.driver,
+      supplier: trip.supplier,
+      volume_ton: trip.volumeTon.toString(),
+      cost_mercadoria: trip.costMercadoria.toString(),
+      cost_logistico: trip.costLogistico.toString(),
+      cost_alimentacao: trip.costAlimentacao.toString(),
+      cost_manutencao: trip.costManutencao.toString(),
+      cost_outros: trip.costOutros.toString(),
+      revenue: trip.revenue.toString()
+    });
+    setIsNewTripModalOpen(true);
+  };
+
+  const handleDeleteTrip = async (id: string) => {
+    if (window.confirm('Tem certeza que deseja excluir esta carga inteira e todo seu diário de bordo?')) {
+      try {
+        await supabase.from('logistics_trips').delete().eq('id', id);
+        // Will auto-update via realtime
+      } catch (err) {
+        console.error('Error deleting trip:', err);
+      }
+    }
+  };
+
+  const handleDeleteNote = async (id: string) => {
+    if (window.confirm('Excluir esta anotação?')) {
+      try {
+        await supabase.from('logistics_notes').delete().eq('id', id);
+      } catch (err) {
+        console.error('Error deleting note:', err);
+      }
+    }
+  };
+
+
   const handleAddTrip = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { error } = await supabase.from('logistics_trips').insert([{
+      const tripData = {
         date: newTrip.date.split('-').reverse().join('/'),
         truck: newTrip.truck,
         driver: newTrip.driver,
@@ -42,16 +101,23 @@ export function CentralLogistica() {
         cost_manutencao: parseFloat(newTrip.cost_manutencao) || 0,
         cost_outros: parseFloat(newTrip.cost_outros) || 0,
         revenue: parseFloat(newTrip.revenue) || 0
-      }]);
-      if (error) throw error;
+      };
+
+      if (editingTripId) {
+        await supabase.from('logistics_trips').update(tripData).eq('id', editingTripId);
+      } else {
+        await supabase.from('logistics_trips').insert([tripData]);
+      }
+      
       setIsNewTripModalOpen(false);
       setNewTrip({
         date: '', truck: '', driver: '', supplier: '', volume_ton: '', 
         cost_mercadoria: '', cost_logistico: '', cost_alimentacao: '', 
         cost_manutencao: '', cost_outros: '', revenue: ''
       });
+      setEditingTripId(null);
     } catch (err) {
-      console.error('Error creating trip:', err);
+      console.error('Error creating/updating trip:', err);
     }
   };
 
@@ -109,7 +175,8 @@ export function CentralLogistica() {
           .filter((note: any) => note.trip_id === trip.id)
           .map((note: any) => ({
             time: note.time,
-            text: note.text
+            text: note.text,
+            noteId: note.id
           }))
       }));
       
@@ -193,7 +260,7 @@ export function CentralLogistica() {
       {activeTab === 'ativas' && (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <button onClick={() => setIsNewTripModalOpen(true)} className="flex items-center gap-2 bg-palette-1 text-white px-4 py-2 rounded-xl font-bold hover:bg-palette-2 transition-colors shadow-sm">
+            <button onClick={openNewTripModal} className="flex items-center gap-2 bg-palette-1 text-white px-4 py-2 rounded-xl font-bold hover:bg-palette-2 transition-colors shadow-sm">
               <Plus size={20} /> Nova Carga
             </button>
           </div>
@@ -203,12 +270,20 @@ export function CentralLogistica() {
               const netProfit = trip.revenue - totalCost;
               return (
                 <div key={trip.id} className="bg-white border border-palette-4 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col">
-                  <div className="p-4 border-b border-palette-4 flex justify-between items-center bg-palette-5/10">
+                                    <div className="p-4 border-b border-palette-4 flex justify-between items-center bg-palette-5/10">
                     <div className="flex items-center gap-2 text-palette-1">
                       <Truck size={20} />
                       <h3 className="font-bold">Carga {trip.id}</h3>
                     </div>
-                    <span className="text-sm font-medium text-palette-3">{trip.date}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-palette-3">{trip.date}</span>
+                      <button onClick={() => openEditTripModal(trip)} className="text-palette-3 hover:text-palette-1 transition-colors">
+                        <Pencil size={16} />
+                      </button>
+                      <button onClick={() => handleDeleteTrip(trip.originalId)} className="text-palette-3 hover:text-red-500 transition-colors">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="p-5 flex-1 space-y-5">
@@ -274,12 +349,17 @@ export function CentralLogistica() {
                       </div>
                       <div className="space-y-3">
                         {trip.occurrences?.map((occ: any, idx: number) => (
-                          <div key={idx} className="flex gap-3 text-sm">
-                            <div className="w-1.5 h-1.5 rounded-full bg-palette-3 mt-1.5 shrink-0" />
-                            <div>
-                              <p className="text-xs font-bold text-palette-2 mb-0.5">{occ.time}</p>
-                              <p className="text-text-main font-medium">{occ.text}</p>
+                                                    <div key={idx} className="flex justify-between items-start text-sm group">
+                            <div className="flex gap-3">
+                              <div className="w-1.5 h-1.5 rounded-full bg-palette-3 mt-1.5 shrink-0" />
+                              <div>
+                                <p className="text-xs font-bold text-palette-2 mb-0.5">{occ.time}</p>
+                                <p className="text-text-main font-medium">{occ.text}</p>
+                              </div>
                             </div>
+                            <button onClick={() => handleDeleteNote(occ.noteId)} className="opacity-0 group-hover:opacity-100 p-1 text-palette-3 hover:text-red-500 transition-all">
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -573,7 +653,7 @@ export function CentralLogistica() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-4 border-b border-palette-4">
-              <h3 className="font-bold text-lg text-text-main">Nova Carga</h3>
+              <h3 className="font-bold text-lg text-text-main">{editingTripId ? 'Editar Carga' : 'Nova Carga'}</h3>
               <button onClick={() => setIsNewTripModalOpen(false)} className="text-palette-2 hover:text-red-500 transition-colors">
                 <X size={24} />
               </button>
@@ -638,7 +718,7 @@ export function CentralLogistica() {
                   Cancelar
                 </button>
                 <button type="submit" className="px-4 py-2 bg-palette-1 text-white font-bold rounded-xl hover:bg-palette-2 transition-colors shadow-sm">
-                  Salvar Carga
+                  {editingTripId ? 'Salvar Edição' : 'Salvar Carga'}
                 </button>
               </div>
             </form>

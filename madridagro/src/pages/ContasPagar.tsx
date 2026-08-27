@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowDownRight, Clock, CheckCircle2, Plus, X } from 'lucide-react';
+import { ArrowDownRight, Clock, CheckCircle2, Plus, X, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
@@ -22,6 +22,36 @@ export function ContasPagar() {
     due_date: '',
     description: ''
   });
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const openNewModal = () => {
+    setEditingId(null);
+    setNewPayable({ supplier: '', amount: '', due_date: '', description: '' });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (item: Payable) => {
+    setEditingId(item.id);
+    setNewPayable({
+      supplier: item.supplier,
+      amount: item.amount.toString(),
+      due_date: item.due_date.substring(0, 10),
+      description: item.description || ''
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Tem certeza que deseja excluir esta conta?')) {
+      try {
+        const { error } = await supabase.from('accounts_payable').delete().eq('id', id);
+        if (error) throw error;
+        toast.success('Conta excluída com sucesso!');
+      } catch (err) {
+        toast.error('Erro ao excluir a conta');
+      }
+    }
+  };
 
   useEffect(() => {
     fetchPayables();
@@ -57,19 +87,31 @@ export function ContasPagar() {
   const handleAddPayable = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { error } = await supabase.from('accounts_payable').insert([{
-        supplier: newPayable.supplier,
-        amount: parseFloat(newPayable.amount),
-        due_date: new Date(newPayable.due_date).toISOString(),
-        description: newPayable.description,
-        status: 'pending'
-      }]);
-      if (error) throw error;
-      toast.success('Conta adicionada com sucesso!');
+      if (editingId) {
+        const { error } = await supabase.from('accounts_payable').update({
+          supplier: newPayable.supplier,
+          amount: parseFloat(newPayable.amount),
+          due_date: new Date(newPayable.due_date).toISOString(),
+          description: newPayable.description
+        }).eq('id', editingId);
+        if (error) throw error;
+        toast.success('Conta atualizada com sucesso!');
+      } else {
+        const { error } = await supabase.from('accounts_payable').insert([{
+          supplier: newPayable.supplier,
+          amount: parseFloat(newPayable.amount),
+          due_date: new Date(newPayable.due_date).toISOString(),
+          description: newPayable.description,
+          status: 'pending'
+        }]);
+        if (error) throw error;
+        toast.success('Conta adicionada com sucesso!');
+      }
       setIsModalOpen(false);
       setNewPayable({ supplier: '', amount: '', due_date: '', description: '' });
+      setEditingId(null);
     } catch (error) {
-      toast.error('Erro ao adicionar conta');
+      toast.error('Erro ao salvar conta');
     }
   };
 
@@ -100,7 +142,7 @@ export function ContasPagar() {
           <p className="text-palette-2 text-sm">Gestão de pagamentos das safras aos produtores.</p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={openNewModal}
           className="flex items-center gap-2 bg-palette-1 text-white px-4 py-2 rounded-xl font-bold hover:bg-palette-2 transition-colors shadow-sm"
         >
           <Plus size={20} /> Nova Conta
@@ -129,6 +171,7 @@ export function ContasPagar() {
                   <th className="p-4 font-bold uppercase tracking-wider">Vencimento</th>
                   <th className="p-4 font-bold uppercase tracking-wider">Valor</th>
                   <th className="p-4 font-bold uppercase tracking-wider">Status</th>
+                  <th className="p-4 font-bold uppercase tracking-wider text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -152,11 +195,19 @@ export function ContasPagar() {
                         {item.status === 'pending' ? <><Clock size={14} /> Aguardando</> : <><CheckCircle2 size={14} /> Pago</>}
                       </button>
                     </td>
+                    <td className="p-4 text-right">
+                      <button onClick={() => openEditModal(item)} className="p-1.5 text-palette-3 hover:text-palette-1 transition-colors mr-2">
+                        <Pencil size={18} />
+                      </button>
+                      <button onClick={() => handleDelete(item.id)} className="p-1.5 text-palette-3 hover:text-red-500 transition-colors">
+                        <Trash2 size={18} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {payables.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-palette-2">Nenhuma conta encontrada.</td>
+                    <td colSpan={6} className="p-8 text-center text-palette-2">Nenhuma conta encontrada.</td>
                   </tr>
                 )}
               </tbody>
@@ -169,7 +220,7 @@ export function ContasPagar() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-4 border-b border-palette-4 flex justify-between items-center bg-palette-5/20">
-              <h3 className="font-bold text-text-main text-lg">Nova Conta a Pagar</h3>
+              <h3 className="font-bold text-text-main text-lg">{editingId ? 'Editar Conta' : 'Nova Conta a Pagar'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-palette-3 hover:text-red-500 transition-colors">
                 <X size={24} />
               </button>
