@@ -17,6 +17,10 @@ Sistema de Gestão e Logística Atacadista voltado para o controle operacional d
 
 ## Changelog / Histórico
 
+- **v1.5 - Gestão Financeira (27/08/2026):**
+  - **Pagamentos Parciais:** Criação da tabela `partial_payments` no Supabase com suporte a Realtime e RLS (Segurança habilitada).
+  - **Fiados Flexíveis:** Tela de Fiados atualizada. Clientes agora podem abater valores (botão `$ Abater`). O saldo devedor é recalculado automaticamente em tempo real, mostrando o histórico do valor já pago. Baixa automática acionada quando o saldo chega a zero.
+
 - **v1.4 - Segurança e Refinamentos (26/08/2026):**
   - **CRUD Completo de Contatos:** Criação da tabela `logistics_contacts` no Supabase. Cadastro, edição e exclusão de contatos reais (Borracharia, Guincho, Polícia, etc).
   - **GPS SOS 100% Funcional:** O botão "Capturar Minha Localização GPS" agora funciona visualmente como no *Escudo Lilás*, pegando as coordenadas e mostrando ao usuário antes de enviar o SMS de alerta.
