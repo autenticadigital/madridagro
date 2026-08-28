@@ -1,26 +1,55 @@
 import { useState } from 'react';
 import { useLiveSupabase } from '../hooks/useLiveSupabase';
 import { supabase } from '../lib/supabase';
-import type { AccountReceivable, Client } from '../lib/types';
-import { Receipt, CheckCircle, Trash2, Edit2, X } from 'lucide-react';
+import type { AccountReceivable, Client, PartialPayment } from '../lib/types';
+import { Receipt, CheckCircle, Trash2, Edit2, X, DollarSign } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export function Fiados() {
   const receivables = useLiveSupabase<AccountReceivable>('accounts_receivable', 'created_at', false);
   const clients = useLiveSupabase<Client>('clients', 'name', true);
+  const partialPayments = useLiveSupabase<PartialPayment>('partial_payments', 'created_at', false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState<string>('');
   const [editDate, setEditDate] = useState<string>('');
 
   const handlePay = async (id: string) => {
-    if (!window.confirm('Confirmar baixa deste fiado?')) return;
+    if (!window.confirm('Confirmar baixa TOTAL deste fiado?')) return;
     try {
       const { error } = await supabase.from('accounts_receivable').update({ status: 'paid' }).eq('id', id);
       if (error) throw error;
       toast.success('Baixa registrada com sucesso!');
     } catch (error: any) {
       toast.error('Erro ao registrar baixa: ' + error.message);
+    }
+  };
+
+  const handlePartialPayment = async (id: string, currentAmount: number) => {
+    const amountStr = window.prompt(`Valor a abater do saldo de R$ ${currentAmount.toFixed(2)}?`);
+    if (!amountStr) return;
+    const amount = parseFloat(amountStr.replace(',', '.'));
+    if (isNaN(amount) || amount <= 0) return toast.error('Valor inválido.');
+    if (amount > currentAmount) return toast.error('Valor não pode ser maior que a dívida restante!');
+
+    try {
+      const now = new Date().toISOString();
+      const { error: insertError } = await supabase.from('partial_payments').insert([{
+        account_receivable_id: id,
+        amount,
+        date: now
+      }]);
+      if (insertError) throw insertError;
+
+      if (amount >= currentAmount) {
+        const { error: updateError } = await supabase.from('accounts_receivable').update({ status: 'paid' }).eq('id', id);
+        if (updateError) throw updateError;
+        toast.success('Dívida quitada com sucesso!');
+      } else {
+        toast.success(`Abatimento de R$ ${amount.toFixed(2)} registrado!`);
+      }
+    } catch (error: any) {
+      toast.error('Erro ao abater valor: ' + error.message);
     }
   };
 
@@ -71,6 +100,9 @@ export function Fiados() {
           const client = clients?.find(c => c.id === rec.client_id);
           const isLate = new Date(rec.due_date) < new Date();
           const isEditing = editingId === rec.id;
+          const recPayments = partialPayments?.filter(p => p.account_receivable_id === rec.id) || [];
+          const totalPaid = recPayments.reduce((acc, p) => acc + p.amount, 0);
+          const remainingAmount = rec.amount - totalPaid;
           
           return (
             <div key={rec.id} className="bg-white border border-palette-4 p-5 rounded-2xl flex flex-col gap-4 relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
@@ -119,7 +151,14 @@ export function Fiados() {
                     className="text-xl font-black text-text-main w-24 p-1 border rounded"
                   />
                 ) : (
-                  <p className="text-2xl font-black text-text-main">R$ {rec.amount.toFixed(2)}</p>
+                  totalPaid > 0 ? (
+                    <div className="flex flex-col">
+                      <span className="text-2xl font-black text-text-main">R$ {remainingAmount.toFixed(2)}</span>
+                      <span className="text-xs font-bold text-emerald-500">Já pago: R$ {totalPaid.toFixed(2)} (Total: R$ {rec.amount.toFixed(2)})</span>
+                    </div>
+                  ) : (
+                    <p className="text-2xl font-black text-text-main">R$ {rec.amount.toFixed(2)}</p>
+                  )
                 )}
 
                 {isEditing ? (
@@ -130,12 +169,22 @@ export function Fiados() {
                     Salvar
                   </button>
                 ) : (
-                  <button 
-                    onClick={() => handlePay(rec.id)}
-                    className="bg-white hover:bg-palette-5/30 text-palette-1 border border-palette-1 p-2 px-3 rounded-xl transition-all flex items-center gap-2 text-sm font-bold shadow-sm hover:shadow"
-                  >
-                    <CheckCircle size={16} /> Dar Baixa
-                  </button>
+                  <div className="flex flex-col md:flex-row gap-2">
+                    <button 
+                      onClick={() => handlePartialPayment(rec.id, remainingAmount)}
+                      className="bg-white hover:bg-emerald-50 text-emerald-600 border border-emerald-300 p-2 rounded-xl transition-all flex items-center justify-center gap-1 text-sm font-bold shadow-sm"
+                      title="Abater Valor"
+                    >
+                      <DollarSign size={16} /> Abater
+                    </button>
+                    <button 
+                      onClick={() => handlePay(rec.id)}
+                      className="bg-white hover:bg-palette-5/30 text-palette-1 border border-palette-1 p-2 rounded-xl transition-all flex items-center justify-center gap-1 text-sm font-bold shadow-sm"
+                      title="Quitar Tudo"
+                    >
+                      <CheckCircle size={16} /> Baixa
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

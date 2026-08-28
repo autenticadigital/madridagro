@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
+import WovenClothScene from '@/components/WovenClothScene';
 
 // IMPORTANTE: Desativamos o SSR (Server-Side Rendering) para este componente.
 // Como o ONLYOFFICE usa a janela (window/document) do navegador, a Vercel quebrava ao tentar buildar no servidor Node.js
@@ -17,6 +18,7 @@ const EditorDeRedacao = dynamic(() => import("@/components/EditorDeRedacao"), {
 export default function Home() {
   const [activeDoc, setActiveDoc] = useState("2191725");
   const [isCreating, setIsCreating] = useState(false);
+  const [viewMode, setViewMode] = useState("doc"); // "doc" | "cloth"
 
   // Função "Vibe Coder" que aciona o backend invisível
   const handleCreateNewDoc = async () => {
@@ -37,6 +39,7 @@ export default function Home() {
         }
         // Muda o documento ativo para a nova ID instantaneamente
         setActiveDoc(data.id);
+        setViewMode("doc");
       } else {
         alert("Erro: " + data.error);
       }
@@ -79,9 +82,9 @@ export default function Home() {
           </button>
 
           <button 
-            onClick={() => setActiveDoc(null)}
+            onClick={() => { setActiveDoc(null); setViewMode("doc"); }}
             className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-medium flex items-center gap-3 mt-2
-              ${activeDoc === null 
+              ${activeDoc === null && viewMode === "doc"
                 ? 'bg-gray-800/80 text-white border-gray-700' 
                 : 'text-gray-400 border-transparent hover:bg-gray-800/50 hover:text-gray-200'}`}
           >
@@ -93,14 +96,28 @@ export default function Home() {
           <p className="text-xs font-semibold text-gray-500 mb-2 px-2 uppercase tracking-wider">Documentos Recentes</p>
 
           <button 
-            onClick={() => setActiveDoc("2191725")}
+            onClick={() => { setActiveDoc("2191725"); setViewMode("doc"); }}
             className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-medium flex items-center gap-3
-              ${activeDoc === "2191725" 
+              ${activeDoc === "2191725" && viewMode === "doc"
                 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' 
                 : 'text-gray-400 border-transparent hover:bg-gray-800/50 hover:text-gray-200'}`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             Redação - João (ID: 2191725)
+          </button>
+
+          <div className="h-px bg-gray-800/60 my-4 mx-2"></div>
+          <p className="text-xs font-semibold text-gray-500 mb-2 px-2 uppercase tracking-wider">Experiências 3D</p>
+          
+          <button 
+            onClick={() => setViewMode("cloth")}
+            className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-medium flex items-center gap-3 mt-2
+              ${viewMode === 'cloth' 
+                ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]' 
+                : 'text-gray-400 border-transparent hover:bg-gray-800/50 hover:text-gray-200'}`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
+            Salinas (Woven Cloth)
           </button>
 
         </nav>
@@ -111,13 +128,13 @@ export default function Home() {
         <header className="h-20 border-b border-gray-800/60 bg-black/20 backdrop-blur flex items-center px-8 justify-between z-10 sticky top-0">
           <div>
             <p className="text-xs text-gray-400 font-medium tracking-wider">
-              {activeDoc ? 'MODO DE CORREÇÃO' : 'MODO DE GERENCIAMENTO'}
+              {viewMode === 'cloth' ? 'SHOWCASE 3D' : (activeDoc ? 'MODO DE CORREÇÃO' : 'MODO DE GERENCIAMENTO')}
             </p>
             <h2 className="text-lg font-semibold">
-              {activeDoc ? 'Visualizando Documento' : 'Painel de Arquivos DocSpace'}
+              {viewMode === 'cloth' ? 'Salinas da Margarida - Woven Cloth' : (activeDoc ? 'Visualizando Documento' : 'Painel de Arquivos DocSpace')}
             </h2>
           </div>
-          {activeDoc && (
+          {activeDoc && viewMode === "doc" && (
             <button className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-sm font-medium rounded-lg border border-gray-700 transition-colors shadow-lg">
               Finalizar Correção
             </button>
@@ -125,7 +142,7 @@ export default function Home() {
         </header>
 
         <div className="flex-1 p-8 overflow-hidden flex flex-col">
-          <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col relative">
+          <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col relative h-full">
             
             {/* Loading Overlay State para feedback visual premium */}
             {isCreating && (
@@ -139,7 +156,13 @@ export default function Home() {
               </div>
             )}
 
-            <EditorDeRedacao key={activeDoc || 'manager'} fileId={activeDoc} />
+            {viewMode === "cloth" ? (
+              <div className="w-full h-full rounded-2xl overflow-hidden shadow-2xl border border-gray-800/50">
+                <WovenClothScene />
+              </div>
+            ) : (
+              <EditorDeRedacao key={activeDoc || 'manager'} fileId={activeDoc} />
+            )}
           </div>
         </div>
       </div>

@@ -51,3 +51,11 @@ export interface AccountReceivable {
   status: 'pending' | 'paid';
   created_at: string;
 }
+
+export interface PartialPayment {
+  id: string;
+  account_receivable_id: string;
+  amount: number;
+  date: string;
+  created_at: string;
+}
